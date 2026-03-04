@@ -17,7 +17,19 @@ Universal Speedtest CLI respects the following environment variables:
   **Type:** String (any non-empty value)
 </ParamField>
 
-## When to Use NO_COLOR
+## TERM
+
+<ParamField path="TERM" type="string">
+  Controls terminal capabilities. When set to `dumb`, ANSI color codes are disabled.
+  
+  The CLI automatically detects `TERM=dumb` and disables color output to ensure compatibility with simple terminals that don't support ANSI escape sequences.
+  
+  **Default:** Depends on your terminal (typically `xterm-256color`, `screen`, etc.)
+  
+  **Type:** String
+</ParamField>
+
+## When to Disable Colors
 
 ### CI/CD Pipelines
 
@@ -41,9 +53,13 @@ NO_COLOR=1 unispeedtest > log.txt
 
 ### Terminals Without Color Support
 
-Some terminals or terminal emulators don't support ANSI colors:
+Some terminals or terminal emulators don't support ANSI colors. The CLI automatically detects `TERM=dumb`, but you can also use `NO_COLOR`:
 
 ```bash
+# Automatic detection
+TERM=dumb unispeedtest
+
+# Or explicitly disable
 export NO_COLOR=1
 unispeedtest
 ```
@@ -150,7 +166,8 @@ Initializing Cloudflare Speed Test...
 
 ## Notes
 
-- The `NO_COLOR` variable only affects human-readable output mode
-- JSON output modes (`-json` and `-pretty`) automatically disable colors regardless of `NO_COLOR`
+- Color variables only affect human-readable output mode
+- JSON output modes (`-json` and `-pretty`) automatically disable colors regardless of these settings
 - Setting `NO_COLOR` to an empty string does not disable colors; it must have a value (e.g., `NO_COLOR=1`)
-- This follows the [NO_COLOR standard](https://no-color.org/), which is supported by many CLI tools
+- The `NO_COLOR` standard is documented at [no-color.org](https://no-color.org/)
+- `TERM=dumb` is automatically detected and disables colors without requiring `NO_COLOR`

@@ -93,7 +93,7 @@ Server & Connection:
 
   <Accordion title="Latency & jitter">
     - **Unloaded Latency**: Round-trip time measured before speed tests begin (median of 20 samples)
-    - **Jitter**: Variation in latency measurements, calculated as interquartile range
+    - **Jitter**: Variation in latency measurements, calculated as average absolute difference between consecutive samples
     - **Down-Loaded Latency**: Latency measured during download tests (shows bufferbloat)
     - **Up-Loaded Latency**: Latency measured during upload tests (shows bufferbloat)
     
@@ -106,9 +106,9 @@ Server & Connection:
 
   <Accordion title="Network quality score">
     Evaluates your connection suitability for common activities:
-    - **Video Streaming**: Based on download speed and latency
-    - **Online Gaming**: Based on latency, jitter, and packet loss
-    - **Video Chatting**: Based on upload speed, latency, and jitter
+    - **Video Streaming**: Good if download > 5 Mbps, latency < 100ms, packet loss < 2%
+    - **Online Gaming**: Good if latency < 50ms, jitter < 20ms, packet loss < 1%
+    - **Video Chatting**: Good if download > 2 Mbps, upload > 2 Mbps, latency < 100ms, jitter < 30ms, packet loss < 1%
   </Accordion>
 
   <Accordion title="Server & connection">
