@@ -1,0 +1,259 @@
+---
+title: 'Contributing'
+description: 'How to contribute to Universal Speedtest CLI development'
+---
+
+We welcome contributions to Universal Speedtest CLI! Whether you're fixing bugs, adding features, improving documentation, or proposing new providers, your help is appreciated.
+
+## Ways to Contribute
+
+<CardGroup cols={2}>
+  <Card title="Report Issues" icon="bug">
+    Found a bug or have a feature request? Open an issue on GitHub.
+  </Card>
+  <Card title="Submit Code" icon="code">
+    Fix bugs, add features, or improve existing functionality with pull requests.
+  </Card>
+  <Card title="Improve Documentation" icon="book">
+    Help make our docs clearer and more comprehensive.
+  </Card>
+  <Card title="Propose Providers" icon="lightbulb">
+    Suggest new speed test provider integrations.
+  </Card>
+</CardGroup>
+
+## Development Setup
+
+<Steps>
+  <Step title="Clone the repository">
+    
+    ```bash
+    git clone https://github.com/hsblabs/universal-speedtest-cli.git
+    cd universal-speedtest-cli
+    ```
+
+  </Step>
+
+  <Step title="Ensure Go is installed">
+    
+    Universal Speedtest CLI requires Go 1.21 or higher.
+
+    ```bash
+    go version
+    ```
+
+  </Step>
+
+  <Step title="Build from source">
+    
+    For detailed build instructions, see the [Building from Source](/development/building) guide.
+
+    ```bash
+    go build -trimpath -ldflags="-s -w" -o dist/unispeedtest ./cmd/unispeedtest
+    ```
+
+  </Step>
+
+  <Step title="Run tests">
+    
+    Ensure all tests pass before submitting changes:
+
+    ```bash
+    go test ./...
+    ```
+
+  </Step>
+</Steps>
+
+## Running Tests
+
+Our test suite covers core functionality, statistics calculations, and provider integrations.
+
+### Run all tests
+
+```bash
+go test ./...
+```
+
+### Run tests with verbose output
+
+```bash
+go test -v ./...
+```
+
+### Run tests for a specific package
+
+```bash
+go test ./internal/stats
+go test ./internal/cloudflare
+```
+
+### Run tests with coverage
+
+```bash
+go test -cover ./...
+```
+
+<Tip>
+When adding new features, please include appropriate test coverage. We maintain tests in:
+- `internal/stats/stats_test.go` - Statistics calculations
+- `internal/cloudflare/measure_test.go` - Cloudflare provider
+- `internal/reporter/quality_test.go` - Quality reporting
+</Tip>
+
+## Submitting Changes
+
+<Steps>
+  <Step title="Create a feature branch">
+    
+    ```bash
+    git checkout -b feature/your-feature-name
+    ```
+
+  </Step>
+
+  <Step title="Make your changes">
+    
+    - Write clear, concise code
+    - Follow existing code style and conventions
+    - Add tests for new functionality
+    - Update documentation as needed
+
+  </Step>
+
+  <Step title="Run tests and verify">
+    
+    ```bash
+    go test ./...
+    go build -o dist/unispeedtest ./cmd/unispeedtest
+    ./dist/unispeedtest
+    ```
+
+  </Step>
+
+  <Step title="Commit and push">
+    
+    ```bash
+    git add .
+    git commit -m "feat: add your feature description"
+    git push origin feature/your-feature-name
+    ```
+
+  </Step>
+
+  <Step title="Open a pull request">
+    
+    - Describe what your PR does and why
+    - Reference any related issues
+    - Ensure CI checks pass
+    - Be responsive to review feedback
+
+  </Step>
+</Steps>
+
+## Code Style and Conventions
+
+### Go Code Standards
+
+- Follow standard Go formatting: `go fmt ./...`
+- Run `go vet ./...` to catch common issues
+- Use meaningful variable and function names
+- Add comments for exported functions and complex logic
+- Keep functions focused and concise
+
+### Commit Messages
+
+Use conventional commit format:
+
+- `feat:` for new features
+- `fix:` for bug fixes
+- `docs:` for documentation changes
+- `test:` for test additions or changes
+- `refactor:` for code refactoring
+- `chore:` for maintenance tasks
+
+Example:
+```
+feat: add timeout flag for unstable networks
+
+Adds --timeout flag to allow users to configure request timeouts
+for networks with high latency or packet loss.
+
+Fixes #123
+```
+
+### Testing Guidelines
+
+- Write table-driven tests when testing multiple cases
+- Use descriptive test names that explain what's being tested
+- Test edge cases and error conditions
+- Mock external dependencies when appropriate
+- Aim for high coverage of critical paths
+
+## Feature Priorities
+
+When deciding what to work on, refer to our [Roadmap](/roadmap) for current priorities:
+
+1. **Phase 1**: Foundation hardening (error handling, reliability)
+2. **Phase 2**: Multi-provider support (extensibility)
+3. **Phase 3**: CLI enhancements (output formats, profiles)
+4. **Phase 4**: Ecosystem integration (packaging, distribution)
+
+Features that improve stability, maintain backward compatibility, and enhance automation workflows are highly valued.
+
+## Reporting Issues
+
+When reporting bugs or requesting features:
+
+<Accordion title="Bug Report Template">
+
+**Description**  
+Clear description of the issue
+
+**Steps to Reproduce**  
+1. Run command: `unispeedtest -json`
+2. Observe error
+
+**Expected Behavior**  
+What should happen
+
+**Actual Behavior**  
+What actually happens
+
+**Environment**  
+- OS: Linux/macOS/Windows
+- Go version: 1.21
+- CLI version: 1.0.0
+
+**Additional Context**  
+Any other relevant information
+
+</Accordion>
+
+<Accordion title="Feature Request Template">
+
+**Problem**  
+Describe the use case or problem you're trying to solve
+
+**Proposed Solution**  
+Your suggested approach
+
+**Alternatives Considered**  
+Other options you've thought about
+
+**Additional Context**  
+Examples, references, or mockups
+
+</Accordion>
+
+## Questions and Support
+
+<Card title="Need Help?" icon="question-circle">
+  - Check existing [GitHub Issues](https://github.com/hsblabs/universal-speedtest-cli/issues)
+  - Review the [documentation](https://docs.example.com)
+  - Open a new issue for questions or discussions
+</Card>
+
+<Note>
+**Thank you for contributing!** Every contribution, no matter how small, helps make Universal Speedtest CLI better for everyone.
+</Note>

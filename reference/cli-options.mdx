@@ -1,0 +1,109 @@
+---
+title: CLI Options
+description: Command-line flags and options for Universal Speedtest CLI
+---
+
+Universal Speedtest CLI supports the following command-line options:
+
+## Output Format Options
+
+<ParamField path="-json" type="flag">
+  Output test results in compact JSON format instead of the default human-readable format.
+  
+  When this flag is enabled:
+  - Progress messages are suppressed
+  - Results are printed as a single-line JSON object
+  - ANSI colors are disabled
+  
+  **Example:**
+  ```bash
+  unispeedtest -json
+  ```
+  
+  **Output:**
+  ```json
+  {"download_mbps":225.14,"upload_mbps":102.87,"latency_ms":{"unloaded":12.41,"loaded_down":35.09,"loaded_up":41.22,"jitter":1.98},"packet_loss_percent":0.1,"server_colo":"Tokyo","network_asn":"AS2516","network_as_org":"KDDI CORPORATION","ip":"203.0.113.10"}
+  ```
+</ParamField>
+
+<ParamField path="-pretty" type="flag">
+  Output test results in pretty-printed (indented) JSON format. This flag automatically implies `-json`.
+  
+  When this flag is enabled:
+  - Progress messages are suppressed
+  - Results are printed as formatted JSON with 2-space indentation
+  - ANSI colors are disabled
+  - Makes JSON output more human-readable
+  
+  **Example:**
+  ```bash
+  unispeedtest -pretty
+  ```
+  
+  **Output:**
+  ```json
+  {
+    "download_mbps": 225.14,
+    "upload_mbps": 102.87,
+    "latency_ms": {
+      "unloaded": 12.41,
+      "loaded_down": 35.09,
+      "loaded_up": 41.22,
+      "jitter": 1.98
+    },
+    "packet_loss_percent": 0.1,
+    "server_colo": "Tokyo",
+    "network_asn": "AS2516",
+    "network_as_org": "KDDI CORPORATION",
+    "ip": "203.0.113.10"
+  }
+  ```
+</ParamField>
+
+## Usage Examples
+
+### Basic Usage
+
+Run a speed test with human-readable output:
+
+```bash
+unispeedtest
+```
+
+### JSON Output for Automation
+
+Output compact JSON for scripting or API integration:
+
+```bash
+unispeedtest -json
+```
+
+### Pretty JSON for Debugging
+
+Output formatted JSON for easier reading:
+
+```bash
+unispeedtest -pretty
+```
+
+### Pipe to jq
+
+Combine with `jq` for processing JSON output:
+
+```bash
+unispeedtest -json | jq '.download_mbps'
+```
+
+### Save Results to File
+
+Save pretty-printed results to a file:
+
+```bash
+unispeedtest -pretty > results.json
+```
+
+## Notes
+
+- The `-pretty` flag automatically enables `-json`, so you don't need to specify both
+- When using JSON output modes, all progress messages are suppressed
+- The default output mode (without flags) shows colorized, human-readable results with progress indicators

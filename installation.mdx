@@ -1,0 +1,103 @@
+---
+title: Installation
+description: Install Universal Speedtest CLI using GitHub Releases or Go
+---
+
+Universal Speedtest CLI can be installed using pre-built binaries from GitHub Releases or directly with Go. Choose the method that works best for your environment.
+
+## Installation methods
+
+<Steps>
+  <Step title="Choose your installation method">
+    
+    ### Method 1: GitHub Releases (recommended)
+    
+    The easiest way to install is using the installer script:
+    
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/hsblabs/universal-speedtest-cli/main/install.sh | sh
+    ```
+    
+    This script will:
+    - Automatically detect your operating system and architecture
+    - Download the latest release from [GitHub Releases](https://github.com/hsblabs/universal-speedtest-cli/releases)
+    - Verify SHA-256 checksums using the release `checksums.txt`
+    - Install to `/usr/local/bin` by default
+    
+    <Note>
+      You can override the installation directory by setting the `INSTALL_DIR` environment variable:
+      ```bash
+      curl -fsSL https://raw.githubusercontent.com/hsblabs/universal-speedtest-cli/main/install.sh | INSTALL_DIR=~/bin sh
+      ```
+    </Note>
+    
+    #### Manual download
+    
+    If you prefer to download manually:
+    
+    1. Visit the [Releases page](https://github.com/hsblabs/universal-speedtest-cli/releases)
+    2. Download the archive for your platform
+    3. Extract the `unispeedtest` binary
+    4. Place it in a directory in your `PATH`
+    
+    ### Method 2: Install with Go
+    
+    If you have Go installed, you can install directly from source:
+    
+    ```bash
+    go install github.com/hsblabs/universal-speedtest-cli/cmd/unispeedtest@latest
+    ```
+    
+    This installs the binary as `unispeedtest` in your `$GOPATH/bin` or `$GOBIN` directory.
+    
+    <Warning>
+      Make sure your Go bin directory is in your `PATH`. You can check this with:
+      ```bash
+      echo $PATH | grep -o $(go env GOPATH)/bin
+      ```
+    </Warning>
+  </Step>
+  
+  <Step title="Verify the installation">
+    
+    After installation, verify that `unispeedtest` is available:
+    
+    ```bash
+    unispeedtest --help
+    ```
+    
+    You can also check the version by running a quick test:
+    
+    ```bash
+    unispeedtest
+    ```
+    
+    This will run a full speed test and display the results in human-readable format.
+  </Step>
+  
+  <Step title="Optional: Disable color output">
+    
+    If you're running the tool in an environment that doesn't support ANSI colors, you can disable colored output:
+    
+    ```bash
+    export NO_COLOR=1
+    unispeedtest
+    ```
+    
+    You can add this to your shell profile (`.bashrc`, `.zshrc`, etc.) to make it permanent.
+  </Step>
+</Steps>
+
+## Platform support
+
+Universal Speedtest CLI provides pre-built binaries for:
+
+- Linux (amd64, arm64)
+- macOS (amd64, arm64)
+- Windows (amd64)
+
+## Next steps
+
+<Card title="Quickstart" icon="rocket" href="/quickstart">
+  Learn how to run your first speed test
+</Card>

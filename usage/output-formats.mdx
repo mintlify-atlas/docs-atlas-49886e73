@@ -1,0 +1,160 @@
+---
+title: Output formats
+description: Choose between human-readable and JSON output formats
+---
+
+## Available formats
+
+Universal Speedtest CLI supports two output formats:
+
+1. **Human-readable format** (default) - Colored, formatted text with progress updates
+2. **JSON format** - Machine-readable structured data for automation
+
+## Human-readable format
+
+The default format provides a rich, interactive experience with:
+
+- Real-time progress updates during testing
+- Color-coded output for better readability
+- Formatted report with clear sections
+- Network quality scores and recommendations
+
+```bash
+unispeedtest
+```
+
+### Color support
+
+The human-readable format uses ANSI color codes to highlight:
+- **Bold text** for section headers
+- **Green** for speed values
+- **Magenta** for latency and jitter
+- **Color-coded quality scores** (green for Good, red for Poor)
+
+Colors are automatically disabled when:
+- The `NO_COLOR` environment variable is set
+- `TERM=dumb` is detected
+- Output is piped to a file or another command
+
+<Tip>
+The color logic is implemented in `internal/color/color.go:16-26`. The tool respects the [NO_COLOR standard](https://no-color.org/).
+</Tip>
+
+## JSON format
+
+Use the `-json` flag to output results as JSON:
+
+```bash
+unispeedtest -json
+```
+
+### Differences from human-readable format
+
+<CardGroup cols={2}>
+  <Card title="No progress output" icon="eye-slash">
+    Progress messages are suppressed. The tool runs silently until completion.
+  </Card>
+  
+  <Card title="No colors" icon="palette">
+    Plain JSON output without ANSI color codes.
+  </Card>
+  
+  <Card title="Compact by default" icon="compress">
+    Single-line JSON output (use `-pretty` for formatted JSON).
+  </Card>
+  
+  <Card title="Machine-readable" icon="robot">
+    Structured data that's easy to parse programmatically.
+  </Card>
+</CardGroup>
+
+### Pretty-printed JSON
+
+For human-readable JSON with indentation:
+
+```bash
+unispeedtest -pretty
+```
+
+<Note>
+The `-pretty` flag automatically enables JSON output, so you don't need to specify `-json` as well.
+</Note>
+
+## When to use each format
+
+### Use human-readable format when:
+
+- Running tests interactively from the terminal
+- You want to see progress updates in real-time
+- You need to quickly interpret results visually
+- Troubleshooting network issues manually
+
+### Use JSON format when:
+
+- Integrating with monitoring systems
+- Automating speed tests in scripts
+- Storing results in a database
+- Processing results with other tools (jq, scripts, etc.)
+- Running tests in CI/CD pipelines
+- Building dashboards or reports
+
+## Disabling color output
+
+There are multiple ways to disable color output while keeping the human-readable format:
+
+### Using NO_COLOR environment variable
+
+```bash
+NO_COLOR=1 unispeedtest
+```
+
+This follows the [NO_COLOR standard](https://no-color.org/) and is the recommended approach.
+
+### Using TERM environment variable
+
+```bash
+TERM=dumb unispeedtest
+```
+
+Useful when running in environments that don't support ANSI codes.
+
+### Piping output
+
+When output is piped, color codes are still included by default. Use `NO_COLOR` to strip them:
+
+```bash
+NO_COLOR=1 unispeedtest | tee results.txt
+```
+
+<Warning>
+Color codes in piped output may appear as escape sequences (e.g., `\x1b[32m`) in text files. Always use `NO_COLOR` when saving human-readable output to files.
+</Warning>
+
+## Format selection reference
+
+| Flag | Output Format | Progress | Colors | Use Case |
+|------|---------------|----------|--------|----------|
+| (none) | Human-readable | Yes | Yes* | Interactive terminal use |
+| `-json` | JSON | No | No | Automation, compact output |
+| `-pretty` | JSON | No | No | Automation, readable JSON |
+
+<sup>*</sup> Colors automatically disabled if `NO_COLOR` is set or `TERM=dumb`
+
+## Implementation details
+
+The output format is controlled by flag parsing in `cmd/unispeedtest/main.go:16-24`:
+
+- When `-json` or `-pretty` is set, the `verbose` flag is disabled
+- When `verbose` is false, progress functions become no-ops
+- The reporter chooses between `PrintHuman()` and `PrintJSON()` based on the verbose flag
+
+```go
+if verbose {
+    reporter.PrintHuman(os.Stdout, result)
+} else {
+    if err := reporter.PrintJSON(os.Stdout, result, *prettyOut); err != nil {
+        fmt.Fprintf(os.Stderr, "error encoding JSON: %v\n", err)
+        os.Exit(1)
+    }
+}
+```

@@ -1,0 +1,98 @@
+---
+title: Building from Source
+description: Learn how to build Universal Speedtest CLI from source code
+---
+
+## Prerequisites
+
+Before building `unispeedtest`, ensure you have:
+
+- **Go 1.26 or later** - Check your version with `go version`
+- **Git** - For cloning the repository
+
+## Clone the Repository
+
+Clone the source code from GitHub:
+
+```bash
+git clone https://github.com/hsblabs/universal-speedtest-cli.git
+cd universal-speedtest-cli
+```
+
+## Build the Binary
+
+Build an optimized production binary:
+
+```bash
+go build -trimpath -ldflags="-s -w" -o dist/unispeedtest ./cmd/unispeedtest
+```
+
+This command:
+- `-trimpath` removes file system paths from the binary for reproducible builds
+- `-ldflags="-s -w"` strips debug information to reduce binary size
+- `-o dist/unispeedtest` outputs the binary to the `dist/` directory
+- `./cmd/unispeedtest` specifies the main package location
+
+The resulting binary will be located at `dist/unispeedtest`.
+
+## Development Build
+
+For faster development builds without optimization:
+
+```bash
+go build -o unispeedtest ./cmd/unispeedtest
+```
+
+## Running Tests
+
+Run the full test suite:
+
+```bash
+go test ./...
+```
+
+For verbose test output:
+
+```bash
+go test -v ./...
+```
+
+## Local Development Workflow
+
+1. **Make changes** to the source code
+2. **Run tests** to verify your changes:
+   ```bash
+   go test ./...
+   ```
+3. **Build locally** to test the binary:
+   ```bash
+   go build -o unispeedtest ./cmd/unispeedtest
+   ```
+4. **Test the binary**:
+   ```bash
+   ./unispeedtest
+   ```
+5. **Disable color output** during development if needed:
+   ```bash
+   NO_COLOR=1 ./unispeedtest
+   ```
+
+## Installing Locally
+
+Install the binary to your `$GOPATH/bin`:
+
+```bash
+go install ./cmd/unispeedtest
+```
+
+Ensure `$GOPATH/bin` is in your `PATH` to run `unispeedtest` from anywhere.
+
+## Build Verification
+
+Verify the binary works correctly:
+
+```bash
+./dist/unispeedtest -json
+```
+
+You should see JSON output with speed test results.

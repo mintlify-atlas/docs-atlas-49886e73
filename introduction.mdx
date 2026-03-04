@@ -1,0 +1,69 @@
+---
+title: Introduction
+description: A powerful command-line network benchmark tool for comprehensive speed testing
+---
+
+Universal Speedtest CLI (`unispeedtest`) is a command-line network benchmark tool that provides comprehensive insights into your internet connection performance. It uses Cloudflare speed test endpoints and is designed to be extensible to other providers.
+
+## What it does
+
+Universal Speedtest CLI measures critical network performance metrics to give you a complete picture of your internet connection quality:
+
+- **Download and upload throughput** - Measures real-world transfer speeds
+- **Latency analysis** - Tests both unloaded and loaded conditions
+- **Packet loss detection** - Identifies connection reliability issues
+- **Network metadata** - Provides server location and ISP information
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="Accurate throughput measurement" icon="gauge-high">
+    Download and upload speeds calculated using 90th percentile of sampled Mbps values across multiple test sizes
+  </Card>
+  
+  <Card title="Comprehensive latency metrics" icon="clock">
+    Measures unloaded latency (median of 20 samples), loaded latency during download/upload, and jitter
+  </Card>
+  
+  <Card title="Packet loss testing" icon="signal">
+    Runs 1000 concurrent requests to accurately measure connection reliability
+  </Card>
+  
+  <Card title="Network intelligence" icon="network-wired">
+    Provides Cloudflare colo location, ASN/AS organization, and your public IP address
+  </Card>
+</CardGroup>
+
+### Output formats
+
+The tool supports multiple output formats:
+
+- **Human-readable report** - Colorful, formatted output with quality scores for streaming, gaming, and video chatting
+- **JSON output** - Compact or pretty-printed JSON for integration with other tools and scripts
+
+<Note>
+  Universal Speedtest CLI is designed to be extensible. While it currently uses Cloudflare endpoints, the architecture supports adding additional speed test providers in the future.
+</Note>
+
+## Measurement methodology
+
+The tool performs comprehensive measurements in phases:
+
+1. **Unloaded latency** - 20 lightweight requests to establish baseline latency
+2. **Download phase** - Multiple test sizes (101KB, 1MB, 10MB, 25MB) with varying repetition counts
+3. **Upload phase** - Same test sizes with adaptive repetition counts
+4. **Packet loss test** - 1000 requests with concurrency of 50
+
+During download and upload phases, background latency monitoring continues to measure loaded latency conditions.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install Universal Speedtest CLI on your system
+  </Card>
+  
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Run your first speed test in minutes
+  </Card>
+</CardGroup>

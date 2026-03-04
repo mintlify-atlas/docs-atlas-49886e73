@@ -1,0 +1,141 @@
+---
+title: Architecture
+description: Understanding the codebase structure and design of Universal Speedtest CLI
+---
+
+## Project Structure
+
+The project follows standard Go project layout conventions:
+
+```
+universal-speedtest-cli/
+├── cmd/
+│   └── unispeedtest/        # CLI entry point
+├── internal/                # Internal packages (not importable by external projects)
+│   ├── cloudflare/          # Cloudflare provider implementation
+│   ├── stats/               # Statistical calculation functions
+│   ├── reporter/            # Output formatting and quality evaluation
+│   └── color/               # ANSI color code utilities
+├── go.mod                   # Go module definition
+└── README.md
+```
+
+## Package Breakdown
+
+### `cmd/unispeedtest`
+
+**Purpose:** CLI application entry point
+
+- Parses command-line flags (`-json`, `-pretty`)
+- Orchestrates the speed test workflow
+- Handles output formatting based on user preferences
+- Main executable package
+
+### `internal/cloudflare`
+
+**Purpose:** Cloudflare speed test provider implementation
+
+- Communicates with Cloudflare Speed Test API
+- Performs download throughput measurements
+- Performs upload throughput measurements
+- Measures latency (unloaded and loaded)
+- Tests packet loss
+- Retrieves network metadata (colo location, ASN, IP address)
+- Includes `MeasureSpeed` utility for converting bytes/duration to Mbps
+
+**Key files:**
+- Speed measurement logic
+- API client implementation
+- `measure_test.go` - Unit tests for speed calculations
+
+### `internal/stats`
+
+**Purpose:** Statistical calculation utilities
+
+**Functions:**
+- `Average()` - Calculate mean of values
+- `Median()` - Calculate median (50th percentile)
+- `Quartile()` - Calculate arbitrary percentiles (used for 90th percentile throughput)
+- `Jitter()` - Calculate average absolute difference between consecutive samples
+
+**Key characteristics:**
+- Pure functions (no side effects)
+- Non-mutating (doesn't modify input slices)
+- Thoroughly tested with edge cases
+
+### `internal/reporter`
+
+**Purpose:** Output formatting and quality assessment
+
+- Formats human-readable output with colors
+- Generates JSON output (compact and pretty-printed)
+- `EvaluateQuality()` - Determines connection suitability for:
+  - **Streaming** (download ≥ 5 Mbps, packet loss < 2%)
+  - **Gaming** (latency < 50ms, jitter < 20ms, packet loss < 1%)
+  - **Video Chatting** (download ≥ 2 Mbps, upload ≥ 2 Mbps, latency < 100ms, jitter < 30ms, packet loss < 1%)
+
+### `internal/color`
+
+**Purpose:** ANSI color code management
+
+- Provides color constants and utilities
+- Respects `NO_COLOR` environment variable
+- Enables colorized terminal output for better readability
+
+## Provider Architecture
+
+### Current Implementation
+
+The project currently implements **Cloudflare** as its speed test provider:
+
+- Uses Cloudflare's speed test endpoints
+- Measures download/upload throughput using 90th percentile
+- Samples latency (20 measurements for unloaded, continuous during loaded tests)
+- Tests packet loss with 1000 requests at concurrency 50
+
+### Extensible Design
+
+While currently Cloudflare-only, the architecture is designed for multi-provider support:
+
+1. **Provider interface** (planned) - Abstract speed test operations
+2. **Normalized output** - Consistent JSON schema across providers
+3. **Provider selection** (planned) - `--provider` flag for choosing backends
+
+## Future Multi-Provider Support
+
+From the [ROADMAP.md](https://github.com/hsblabs/universal-speedtest-cli/blob/main/ROADMAP.md), the multi-provider architecture is planned for **Phase 2**:
+
+### Planned Features
+
+- **Provider interface** - Common interface that all providers implement
+- **Provider flag** - `--provider cloudflare` or `--provider auto`
+- **Capability reporting** - Different providers may support different measurements
+- **Normalized results** - Provider changes won't break JSON consumers
+- **Integration tests** - Provider-specific adapter testing
+
+### Design Goals
+
+1. **Accuracy first** - Stable measurement methodology
+2. **Extensibility** - Provider-agnostic architecture
+3. **Automation-friendly** - Predictable exit codes, JSON-first workflows
+4. **Operational trust** - Reproducible releases
+
+### Potential Future Providers
+
+The architecture will support adding providers like:
+- Ookla Speedtest
+- Fast.com (Netflix)
+- LibreSpeed
+- Custom endpoints
+
+## Contributing New Providers
+
+When the provider interface is implemented, contributors will be able to:
+
+1. Implement the provider interface
+2. Add provider-specific client code to `internal/<provider>/`
+3. Register the provider with the CLI
+4. Add integration tests
+5. Document provider-specific behavior
+
+See [Phase 4 of the roadmap](https://github.com/hsblabs/universal-speedtest-cli/blob/main/ROADMAP.md) for the public contribution guide timeline.

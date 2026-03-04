@@ -1,0 +1,256 @@
+---
+title: Network Metadata
+description: Understanding the network information collected during speed tests
+---
+
+Universal Speedtest CLI collects network metadata to provide context about your connection and the test server. This information helps interpret your speed test results.
+
+## Metadata Collection
+
+Network metadata is fetched at the beginning of each test (main.go:45):
+
+```go
+meta, err := cloudflare.FetchMeta()
+```
+
+This makes a single HTTP request to Cloudflare's metadata endpoint and returns information about your network and the test server.
+
+**Implementation:** cloudflare/meta.go:9-35
+
+## Collected Metadata Fields
+
+The `CloudFlareMeta` structure contains the following fields (cloudflare/types.go:5-19):
+
+```go
+type CloudFlareMeta struct {
+    ASN            int    `json:"asn"`
+    ASOrganization string `json:"asOrganization"`
+    ClientIP       string `json:"clientIp"`
+    City           string `json:"city"`
+    Colo           struct {
+        IATA   string  `json:"iata"`
+        Lat    float64 `json:"lat"`
+        Lon    float64 `json:"lon"`
+        CCA2   string  `json:"cca2"`
+        Region string  `json:"region"`
+        City   string  `json:"city"`
+    } `json:"colo"`
+}
+```
+
+## ASN (Autonomous System Number)
+
+**Field:** `ASN` (integer)
+
+**What it is:** A unique identifier assigned to your Internet Service Provider (ISP) or network operator.
+
+**Example:** `7922` (Comcast), `701` (Verizon), `15169` (Google)
+
+**Why it matters:** Identifies your network provider and can be used to research network routing and peering relationships.
+
+**Display format:** Formatted as `AS{number}` in results (e.g., `AS7922`)
+
+## AS Organization
+
+**Field:** `ASOrganization` (string)
+
+**What it is:** The human-readable name of the organization that operates the autonomous system.
+
+**Example:** `"Comcast Cable Communications, LLC"`, `"Google LLC"`
+
+**Why it matters:** Provides clear identification of your ISP or network provider.
+
+## Client IP Address
+
+**Field:** `ClientIP` (string)
+
+**What it is:** Your public-facing IP address as seen by the test server.
+
+**Format:** IPv4 (e.g., `"203.0.113.42"`) or IPv6 (e.g., `"2001:db8::1"`)
+
+**Privacy note:** This is your public IP address that is visible to any server you connect to on the internet.
+
+## Colo (Colocation) Information
+
+The `Colo` structure contains information about the Cloudflare data center handling your test.
+
+### IATA Code
+
+**Field:** `Colo.IATA` (string)
+
+**What it is:** The three-letter airport code identifying the data center location.
+
+**Example:** `"LAX"` (Los Angeles), `"LHR"` (London Heathrow), `"SYD"` (Sydney)
+
+**Why it matters:** Indicates the physical location of the test server, which affects latency due to distance.
+
+### Geographic Coordinates
+
+**Fields:** `Colo.Lat` (float64), `Colo.Lon` (float64)
+
+**What it is:** The latitude and longitude of the data center.
+
+**Example:** `Lat: 34.0522, Lon: -118.2437` (Los Angeles)
+
+**Why it matters:** Allows precise calculation of distance between you and the test server.
+
+### Country Code
+
+**Field:** `Colo.CCA2` (string)
+
+**What it is:** The two-letter ISO 3166-1 alpha-2 country code.
+
+**Example:** `"US"`, `"GB"`, `"AU"`
+
+### Region
+
+**Field:** `Colo.Region` (string)
+
+**What it is:** The state or region name where the data center is located.
+
+**Example:** `"California"`, `"England"`, `"New South Wales"`
+
+### City
+
+**Field:** `Colo.City` (string)
+
+**What it is:** The city name where the data center is located.
+
+**Example:** `"Los Angeles"`, `"London"`, `"Sydney"`
+
+**Display:** This value is shown as "Server Colo" in the test results (main.go:82)
+
+## How Metadata is Fetched
+
+The metadata fetch process (cloudflare/meta.go:10-35):
+
+```go
+func FetchMeta() (CloudFlareMeta, error) {
+    var meta CloudFlareMeta
+    
+    req, err := http.NewRequest("GET", baseURL+"/meta", nil)
+    if err != nil {
+        return meta, err
+    }
+    
+    req.Header.Set("User-Agent", "Mozilla/5.0...")
+    req.Header.Set("Accept", "application/json, text/plain, */*")
+    req.Header.Set("Referer", baseURL+"/")
+    req.Header.Set("Origin", baseURL)
+    
+    resp, err := defaultClient.Do(req)
+    if err != nil {
+        return meta, err
+    }
+    defer resp.Body.Close()
+    
+    err = json.NewDecoder(resp.Body).Decode(&meta)
+    return meta, err
+}
+```
+
+### Request Details
+
+- **Method:** GET
+- **Endpoint:** `{baseURL}/meta`
+- **Headers:** Mimics browser request to ensure compatibility
+- **Response format:** JSON
+
+### Error Handling
+
+If metadata fetch fails, the tool continues with the speed test but shows a warning:
+
+```go
+if err != nil {
+    fmt.Fprintf(os.Stderr, "Warning: could not fetch network metadata: %v\n", err)
+}
+```
+
+Speed test results will still be generated, but metadata fields may be empty or default values.
+
+## Privacy Considerations
+
+### What is Sent
+
+- Standard HTTP headers (User-Agent, Accept, etc.)
+- Your IP address (automatically included in HTTP requests)
+- No personal information or system details
+
+### What is Received
+
+- Network routing information (ASN)
+- Geographic approximation based on IP
+- Test server location
+
+### Data Storage
+
+Universal Speedtest CLI:
+- Does **not** send metadata to any third-party servers
+- Does **not** store metadata persistently
+- Only displays metadata in test results or JSON output
+
+Cloudflare's privacy policy governs how they handle metadata requests. Consult [Cloudflare's privacy policy](https://www.cloudflare.com/privacypolicy/) for details.
+
+## Using Metadata in Results
+
+Metadata appears in both human-readable and JSON output formats.
+
+### Human-Readable Output
+
+The metadata is displayed in the results summary:
+
+```
+Server Colo:   Los Angeles
+Network:       AS7922 - Comcast Cable Communications, LLC
+Your IP:       203.0.113.42
+```
+
+### JSON Output
+
+All metadata is included in JSON output:
+
+```json
+{
+  "download_mbps": 125.5,
+  "upload_mbps": 23.4,
+  "server_colo": "Los Angeles",
+  "network_asn": "AS7922",
+  "network_as_org": "Comcast Cable Communications, LLC",
+  "ip": "203.0.113.42"
+}
+```
+
+**Implementation:** Results are compiled in main.go:72-86
+
+## Troubleshooting
+
+### Metadata Fetch Failure
+
+If you see the warning "could not fetch network metadata", possible causes include:
+
+- **Network connectivity issues:** Cannot reach Cloudflare's API
+- **Firewall blocking:** Corporate firewall blocking the metadata endpoint
+- **DNS resolution failure:** Cannot resolve Cloudflare's hostname
+- **TLS/SSL errors:** Certificate validation issues
+
+The speed test will continue even if metadata fetch fails, but location and network information will be missing from results.
+
+### Inaccurate Location
+
+IP-based geolocation may be inaccurate if:
+
+- Using a VPN or proxy
+- Your ISP's IP ranges are incorrectly registered
+- Using mobile data (towers may be far from registered location)
+
+The "Colo" information indicates the **test server** location, not your location.
+
+### Server Selection
+
+Cloudflare automatically routes your request to the nearest data center based on:
+
+- Anycast routing
+- BGP preferences
+- Network topology
+
+You cannot manually select a specific test server. The automatically selected server represents your typical Cloudflare connection routing.

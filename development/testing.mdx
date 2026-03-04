@@ -1,0 +1,129 @@
+---
+title: Testing
+description: Learn about the test suite and how to run tests for Universal Speedtest CLI
+---
+
+## Running Tests
+
+Run all tests in the project:
+
+```bash
+go test ./...
+```
+
+Run tests with verbose output:
+
+```bash
+go test -v ./...
+```
+
+Run tests for a specific package:
+
+```bash
+go test ./internal/stats
+go test ./internal/cloudflare
+go test ./internal/reporter
+```
+
+## Test Coverage
+
+The project includes comprehensive unit tests for core functionality:
+
+### Stats Package Tests
+
+**Location:** `internal/stats/stats_test.go`
+
+Tests statistical calculation functions:
+
+- **Average** - Mean calculation with empty, single, and multiple values
+- **Median** - Median calculation for odd and even counts, including mutation safety
+- **Quartile** - Percentile calculations (p50, p90, p0, p100)
+- **Jitter** - Average absolute difference between consecutive samples
+
+Key test cases:
+- Empty input handling
+- Single value scenarios
+- Edge cases (sorted/unsorted data)
+- Non-mutation guarantees (functions don't modify input arrays)
+
+### Cloudflare Package Tests
+
+**Location:** `internal/cloudflare/measure_test.go`
+
+Tests speed measurement calculations:
+
+- **MeasureSpeed** - Converts bytes and duration to Mbps
+  - Various throughput scenarios (0.8 Mbps to 800 Mbps)
+  - Different time windows (500ms to 1000ms)
+  - Byte count variations (100kB to 100MB)
+
+### Reporter Package Tests
+
+**Location:** `internal/reporter/quality_test.go`
+
+Tests network quality evaluation logic:
+
+- **EvaluateQuality** - Determines suitability for different use cases
+  - Streaming thresholds (download speed, packet loss)
+  - Gaming thresholds (latency, jitter, packet loss)
+  - Video chatting thresholds (download, upload, latency, jitter, packet loss)
+
+Test scenarios include:
+- Excellent connections passing all criteria
+- High latency affecting gaming
+- High jitter affecting different use cases
+- Slow speeds failing streaming or chatting
+- Packet loss affecting all quality scores
+
+## Writing Tests
+
+When contributing new functionality:
+
+1. **Follow Go testing conventions**
+   - Test files end with `_test.go`
+   - Test functions start with `Test`
+   - Use table-driven tests for multiple scenarios
+
+2. **Use the existing test patterns**:
+   ```go
+   func TestYourFunction(t *testing.T) {
+       tests := []struct {
+           name   string
+           input  InputType
+           expect OutputType
+       }{
+           {"case 1", input1, expected1},
+           {"case 2", input2, expected2},
+       }
+       for _, tt := range tests {
+           t.Run(tt.name, func(t *testing.T) {
+               got := YourFunction(tt.input)
+               if got != tt.expect {
+                   t.Errorf("got %v, want %v", got, tt.expect)
+               }
+           })
+       }
+   }
+   ```
+
+3. **Test edge cases**
+   - Empty inputs
+   - Single element inputs
+   - Boundary values
+   - Error conditions
+
+4. **Ensure tests don't mutate inputs** when functions should be pure
+
+## Contributing Tests
+
+When submitting pull requests:
+
+1. **Add tests** for new functionality
+2. **Ensure existing tests pass**:
+   ```bash
+   go test ./...
+   ```
+3. **Consider adding benchmark tests** for performance-critical code
+4. **Document test expectations** with clear test case names
+
+Tests help maintain code quality and prevent regressions as the project evolves.

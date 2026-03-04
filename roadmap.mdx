@@ -1,0 +1,98 @@
+---
+title: 'Roadmap'
+description: 'Planned evolution and future features of Universal Speedtest CLI'
+---
+
+## Vision
+
+Build a fast, reliable, script-friendly speed test CLI that supports multiple providers with a consistent output model.
+
+## Guiding Priorities
+
+The development of Universal Speedtest CLI is driven by four core principles:
+
+<CardGroup cols={2}>
+  <Card title="Accuracy First" icon="bullseye">
+    Stable measurement methodology and transparent metrics ensure reliable results you can trust.
+  </Card>
+  <Card title="Extensibility" icon="plug">
+    Provider-agnostic architecture enables support for multiple speed test backends.
+  </Card>
+  <Card title="Automation-Friendly" icon="robot">
+    Predictable exit codes and JSON-first workflows make CI/CD integration seamless.
+  </Card>
+  <Card title="Operational Trust" icon="shield-check">
+    Reproducible releases and strong CI quality gates ensure production reliability.
+  </Card>
+</CardGroup>
+
+## Development Phases
+
+Our roadmap is organized into distinct phases, each building upon the previous foundation. This structure is directional and may evolve based on community feedback.
+
+<AccordionGroup>
+  <Accordion title="Phase 1: Foundation Hardening" icon="hammer">
+    
+    Strengthening the core functionality with improved error handling and reliability features.
+
+    - Add structured error codes and clearer failure diagnostics
+    - Add timeout/retry flags for unstable networks
+    - Add a `--no-color` flag (in addition to `NO_COLOR` env support)
+    - Expand tests for edge-case latency/packet-loss scenarios
+    - Add benchmark tests for core stats functions
+
+  </Accordion>
+
+  <Accordion title="Phase 2: Multi-Provider Core" icon="network-wired">
+    
+    Introducing a flexible provider system that enables support for multiple speed test backends.
+
+    - Introduce a provider interface (`cloudflare`, future providers)
+    - Add `--provider` flag with `auto` and explicit provider selection
+    - Normalize results so provider changes do not break JSON consumers
+    - Add provider capability reporting (what each backend can measure)
+    - Add integration tests for provider-specific adapters
+
+  </Accordion>
+
+  <Accordion title="Phase 3: CLI and Output Enhancements" icon="terminal">
+    
+    Expanding output options and test configurations for advanced use cases.
+
+    - Add machine-readable metadata (`timestamp`, `provider`, `version`)
+    - Add NDJSON / compact streaming output mode for automation pipelines
+    - Add optional result export (`--out` JSON file)
+    - Add configurable test profiles (`quick`, `standard`, `deep`)
+    - Add optional localization improvements for human-readable output
+
+  </Accordion>
+
+  <Accordion title="Phase 4: Ecosystem and Reliability" icon="box">
+    
+    Building distribution channels and improving the contributor experience.
+
+    - Homebrew formula and common package ecosystem support
+    - Docker image for CI and container-based workflows
+    - Signed release artifacts and optional provenance/SBOM support
+    - Optional telemetry design proposal (off by default)
+    - Public contribution guide for adding new providers
+
+  </Accordion>
+</AccordionGroup>
+
+## Community Input
+
+<Note>
+Feature requests and provider proposals are welcome via [GitHub Issues](https://github.com/hsblabs/universal-speedtest-cli/issues).
+
+Priority will favor changes that keep outputs stable and improve real-world reliability.
+</Note>
+
+We encourage community involvement in shaping the future of Universal Speedtest CLI. When proposing features or providers:
+
+- Check existing issues to avoid duplicates
+- Describe your use case and the problem you're solving
+- Consider backward compatibility and stability
+- Provide examples or references when possible
+
+See our [Contributing Guide](/contributing) for more details on how to get involved.

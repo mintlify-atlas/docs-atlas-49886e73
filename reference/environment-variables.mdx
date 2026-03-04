@@ -1,0 +1,156 @@
+---
+title: Environment Variables
+description: Environment variables that control Universal Speedtest CLI behavior
+---
+
+Universal Speedtest CLI respects the following environment variables:
+
+## NO_COLOR
+
+<ParamField path="NO_COLOR" type="string">
+  Disables ANSI color codes in terminal output.
+  
+  When set to any non-empty value (commonly `1`), this variable instructs the CLI to output plain text without color formatting. This follows the [NO_COLOR standard](https://no-color.org/).
+  
+  **Default:** Not set (colors enabled)
+  
+  **Type:** String (any non-empty value)
+</ParamField>
+
+## When to Use NO_COLOR
+
+### CI/CD Pipelines
+
+Color codes can clutter logs in continuous integration environments:
+
+```bash
+NO_COLOR=1 unispeedtest
+```
+
+### Log Files
+
+When redirecting output to log files, color codes appear as escape sequences:
+
+```bash
+# Without NO_COLOR (produces garbled output in file)
+unispeedtest > log.txt
+
+# With NO_COLOR (clean output)
+NO_COLOR=1 unispeedtest > log.txt
+```
+
+### Terminals Without Color Support
+
+Some terminals or terminal emulators don't support ANSI colors:
+
+```bash
+export NO_COLOR=1
+unispeedtest
+```
+
+### Accessibility
+
+Users who prefer plain text output for screen readers or other accessibility tools:
+
+```bash
+# Add to shell profile (.bashrc, .zshrc, etc.)
+export NO_COLOR=1
+```
+
+## Usage Examples
+
+### Temporary Disable
+
+Disable colors for a single command:
+
+```bash
+NO_COLOR=1 unispeedtest
+```
+
+### Session-Wide Disable
+
+Disable colors for the current terminal session:
+
+```bash
+export NO_COLOR=1
+unispeedtest
+```
+
+### Permanent Disable
+
+Add to your shell configuration file (`~/.bashrc`, `~/.zshrc`, etc.):
+
+```bash
+echo 'export NO_COLOR=1' >> ~/.bashrc
+source ~/.bashrc
+unispeedtest
+```
+
+### CI/CD Configuration
+
+**GitHub Actions:**
+
+```yaml
+- name: Run Speed Test
+  run: unispeedtest
+  env:
+    NO_COLOR: 1
+```
+
+**GitLab CI:**
+
+```yaml
+speedtest:
+  script:
+    - unispeedtest
+  variables:
+    NO_COLOR: "1"
+```
+
+**Jenkins:**
+
+```groovy
+environment {
+    NO_COLOR = '1'
+}
+stages {
+    stage('Speed Test') {
+        steps {
+            sh 'unispeedtest'
+        }
+    }
+}
+```
+
+## Output Comparison
+
+### With Colors (Default)
+
+Terminal output includes ANSI escape codes for colors:
+
+```bash
+$ unispeedtest
+\033[1mInitializing Cloudflare Speed Test...\033[0m
+
+\033[1m[ Download Measurements ]\033[0m
+# ... colored progress output ...
+```
+
+### Without Colors (NO_COLOR=1)
+
+Plain text output without escape codes:
+
+```bash
+$ NO_COLOR=1 unispeedtest
+Initializing Cloudflare Speed Test...
+
+[ Download Measurements ]
+# ... plain text progress output ...
+```
+
+## Notes
+
+- The `NO_COLOR` variable only affects human-readable output mode
+- JSON output modes (`-json` and `-pretty`) automatically disable colors regardless of `NO_COLOR`
+- Setting `NO_COLOR` to an empty string does not disable colors; it must have a value (e.g., `NO_COLOR=1`)
+- This follows the [NO_COLOR standard](https://no-color.org/), which is supported by many CLI tools

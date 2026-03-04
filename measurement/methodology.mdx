@@ -1,0 +1,279 @@
+---
+title: Test Methodology
+description: How Universal Speedtest CLI measures your network performance
+---
+
+This page documents the technical methodology behind Universal Speedtest CLI's measurements, including test phases, sample sizes, and statistical methods.
+
+## Test Sequence
+
+The speed test follows a structured sequence of phases (from main.go:43-70):
+
+1. **Initialization** - Fetch network metadata
+2. **Unloaded Latency** - Measure baseline latency (20 samples)
+3. **Download Phase** - Throughput and loaded latency measurement
+4. **Upload Phase** - Throughput and loaded latency measurement
+5. **Packet Loss Test** - Reliability measurement (1,000 requests)
+6. **Results Compilation** - Calculate final metrics and display results
+
+## Download Phase
+
+### Test Sizes and Repetitions
+
+The download phase uses four different payload sizes, each tested multiple times (main.go:59-61):
+
+```go
+testSizes := []int{101000, 1001000, 10001000, 25001000}
+downCounts := []int{10, 8, 6, 4}
+```
+
+| Size | Repetitions | Purpose |
+|------|-------------|----------|
+| 101 KB | 10 | Quick warmup and low-bandwidth measurement |
+| 1 MB | 8 | Medium file transfer simulation |
+| 10 MB | 6 | Large file transfer simulation |
+| 25 MB | 4 | Sustained high-throughput measurement |
+
+**Total:** 28 download samples
+
+### Timing Measurement
+
+Each download test measures the time between:
+- **Start:** Time to first byte (TTFB) received
+- **End:** All bytes received
+
+```go
+transferTime := pd.Ended.Sub(pd.TTFB).Seconds() * 1000
+speeds = append(speeds, MeasureSpeed(size, transferTime))
+```
+
+This approach excludes connection establishment and server processing time, measuring only pure data transfer speed.
+
+**Implementation:** cloudflare/measure.go:84-88
+
+### Loaded Latency Monitoring
+
+During the download phase, a background goroutine continuously monitors latency:
+
+- **Probe frequency:** Every 200 milliseconds
+- **Probe type:** Lightweight 0-byte request
+- **Duration:** Entire download phase
+
+```go
+ticker := time.NewTicker(200 * time.Millisecond)
+```
+
+This captures how download activity affects your connection's responsiveness.
+
+**Implementation:** cloudflare/measure.go:38-57
+
+## Upload Phase
+
+### Test Sizes and Repetitions
+
+The upload phase uses the same sizes but different repetition counts (main.go:65-66):
+
+```go
+testSizes := []int{101000, 1001000, 10001000, 25001000}
+upCounts := []int{8, 6, 4, 4}
+```
+
+| Size | Repetitions | Purpose |
+|------|-------------|----------|
+| 101 KB | 8 | Quick warmup and low-bandwidth measurement |
+| 1 MB | 6 | Medium file transfer simulation |
+| 10 MB | 4 | Large file transfer simulation |
+| 25 MB | 4 | Sustained high-throughput measurement |
+
+**Total:** 22 upload samples
+
+### Payload Generation
+
+Upload tests generate a payload of the specified size filled with zeros:
+
+```go
+payload = bytes.Repeat([]byte("0"), size)
+```
+
+### Timing Measurement
+
+Upload speed relies on server-side timing reported in the response:
+
+```go
+if pd.ServerTiming > 0 {
+    speeds = append(speeds, MeasureSpeed(size, pd.ServerTiming))
+}
+```
+
+The server measures how long it took to receive the complete upload, eliminating client-side variability.
+
+**Implementation:** cloudflare/measure.go:90-93
+
+## Unloaded Latency Test
+
+### Sample Collection
+
+Baseline latency is measured before any throughput tests (main.go:50-52):
+
+- **Number of samples:** 20
+- **Request size:** 0 bytes
+- **Endpoint:** `/__down?bytes=0`
+- **Method:** Sequential (not concurrent)
+
+### Latency Calculation
+
+Each sample measures network round-trip time minus server processing:
+
+```go
+dur := pd.TTFB.Sub(pd.Started).Seconds()*1000 - pd.ServerTiming
+if dur > 0 {
+    measurements = append(measurements, dur)
+}
+```
+
+- `pd.Started`: Request initiation timestamp
+- `pd.TTFB`: Time to first byte received
+- `pd.ServerTiming`: Server-reported processing time
+
+**Implementation:** cloudflare/measure.go:22-35
+
+## Packet Loss Test
+
+### Test Parameters
+
+The packet loss test runs after throughput measurements (main.go:70):
+
+```go
+const totalRequests = 1000
+const concurrency = 50
+```
+
+- **Total requests:** 1,000
+- **Concurrency limit:** 50 simultaneous requests
+- **Request type:** GET `/__down?bytes=0`
+- **Success criteria:** HTTP 200 status code
+
+### Execution Strategy
+
+Requests are sent concurrently using a semaphore to limit parallelism:
+
+```go
+sem := make(chan struct{}, concurrency)
+for i := 0; i < totalRequests; i++ {
+    wg.Add(1)
+    go func() {
+        defer wg.Done()
+        sem <- struct{}{}
+        defer func() { <-sem }()
+        // ... make request ...
+    }()
+}
+wg.Wait()
+```
+
+This simulates realistic network stress while preventing resource exhaustion.
+
+### Loss Calculation
+
+Packet loss is calculated as:
+
+```go
+loss := (float64(failed) / float64(totalRequests)) * 100
+return math.Round(loss*10) / 10  // Round to 0.1%
+```
+
+**Implementation:** cloudflare/measure.go:118-164
+
+## Statistical Methods
+
+The tool uses several statistical functions from the `stats` package to process raw measurements.
+
+### Median
+
+Used for latency and intermediate progress reporting:
+
+```go
+func Median(values []float64) float64 {
+    sorted := make([]float64, len(values))
+    copy(sorted, values)
+    sort.Float64s(sorted)
+    
+    half := len(sorted) / 2
+    if len(sorted)%2 != 0 {
+        return sorted[half]
+    }
+    return (sorted[half-1] + sorted[half]) / 2.0
+}
+```
+
+Median is preferred for latency because it's resistant to outliers that may occur from temporary network issues.
+
+**Implementation:** stats/stats.go:20-34
+
+### Quartile (Percentile)
+
+Used for final throughput calculations (90th percentile):
+
+```go
+func Quartile(values []float64, percentile float64) float64 {
+    sorted := make([]float64, len(values))
+    copy(sorted, values)
+    sort.Float64s(sorted)
+    
+    pos := float64(len(sorted)-1) * percentile
+    base := int(math.Floor(pos))
+    rest := pos - float64(base)
+    
+    if base+1 < len(sorted) {
+        return sorted[base] + rest*(sorted[base+1]-sorted[base])
+    }
+    return sorted[base]
+}
+```
+
+Uses **linear interpolation** for accurate percentile calculation when the position falls between two values.
+
+**Implementation:** stats/stats.go:36-51
+
+### Jitter
+
+Calculates average variability between consecutive latency measurements:
+
+```go
+func Jitter(values []float64) float64 {
+    diffs := make([]float64, 0, len(values)-1)
+    for i := 0; i < len(values)-1; i++ {
+        diffs = append(diffs, math.Abs(values[i]-values[i+1]))
+    }
+    return Average(diffs)
+}
+```
+
+Measures the absolute difference between each pair of consecutive latency samples, then returns the average.
+
+**Implementation:** stats/stats.go:53-63
+
+## Why 90th Percentile for Throughput?
+
+The tool uses the 90th percentile (`stats.Quartile(speeds, 0.90)`) for final download and upload speeds:
+
+**Advantages:**
+- **Outlier filtering:** Removes the slowest 10% of samples that may be affected by transient issues
+- **Sustained performance:** Better represents achievable speeds under normal conditions
+- **Optimistic but realistic:** Higher than median but not peak performance
+- **Industry alignment:** Common metric in SLAs and network benchmarking
+
+**Alternative approaches not used:**
+- **Average:** Too sensitive to outliers
+- **Median (50th percentile):** Too conservative, doesn't reflect capable speeds
+- **Maximum:** Unrealistic, represents best-case scenario only
+
+## Test Endpoint Details
+
+All measurements use Cloudflare's speed test API endpoints:
+
+- **Download:** `GET /__down?bytes={size}`
+- **Upload:** `POST /__up` with payload
+- **Latency probe:** `GET /__down?bytes=0`
+
+The base URL and HTTP client configuration are defined in cloudflare/client.go.

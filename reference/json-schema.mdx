@@ -1,0 +1,166 @@
+---
+title: JSON Schema
+description: Complete JSON output schema for Universal Speedtest CLI
+---
+
+When running `unispeedtest` with the `-json` or `-pretty` flag, results are output in JSON format with the following structure:
+
+## Response Fields
+
+<ResponseField name="download_mbps" type="float64" required>
+  Download throughput in megabits per second (Mbps).
+  
+  This value represents the 90th percentile of sampled download speed measurements taken across multiple test phases with varying file sizes and connection counts.
+  
+  **Example:** `225.14`
+</ResponseField>
+
+<ResponseField name="upload_mbps" type="float64" required>
+  Upload throughput in megabits per second (Mbps).
+  
+  This value represents the 90th percentile of sampled upload speed measurements taken across multiple test phases with varying file sizes and connection counts.
+  
+  **Example:** `102.87`
+</ResponseField>
+
+<ResponseField name="latency_ms" type="object" required>
+  Latency measurements in milliseconds, including both unloaded and loaded states.
+  
+  <Expandable title="latency_ms properties">
+    <ResponseField name="unloaded" type="float64" required>
+      Median unloaded latency in milliseconds.
+      
+      Measured from 20 ping samples taken before any throughput testing begins. This represents baseline latency without network congestion.
+      
+      **Example:** `12.41`
+    </ResponseField>
+    
+    <ResponseField name="loaded_down" type="float64" required>
+      Median latency in milliseconds during download testing.
+      
+      This represents latency under load while the download phase is actively saturating the connection.
+      
+      **Example:** `35.09`
+    </ResponseField>
+    
+    <ResponseField name="loaded_up" type="float64" required>
+      Median latency in milliseconds during upload testing.
+      
+      This represents latency under load while the upload phase is actively saturating the connection.
+      
+      **Example:** `41.22`
+    </ResponseField>
+    
+    <ResponseField name="jitter" type="float64" required>
+      Average jitter in milliseconds.
+      
+      Calculated as the average absolute difference between consecutive unloaded latency samples. Lower jitter indicates more stable latency.
+      
+      **Example:** `1.98`
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="packet_loss_percent" type="float64" required>
+  Packet loss percentage.
+  
+  Measured by sending 1000 HTTP requests with a concurrency of 50 and calculating the percentage of failed requests.
+  
+  **Example:** `0.1` (represents 0.1% packet loss)
+</ResponseField>
+
+<ResponseField name="server_colo" type="string" required>
+  Cloudflare data center location (city name) that handled the speed test.
+  
+  This indicates which Cloudflare point of presence (PoP) was used for testing, typically the closest one to your location.
+  
+  **Example:** `"Tokyo"`
+</ResponseField>
+
+<ResponseField name="network_asn" type="string" required>
+  Your network's Autonomous System Number (ASN) in the format "AS####".
+  
+  This identifies your Internet Service Provider's routing domain on the global internet.
+  
+  **Example:** `"AS2516"`
+</ResponseField>
+
+<ResponseField name="network_as_org" type="string" required>
+  Your network's Autonomous System organization name.
+  
+  This is the registered name of the entity that operates your AS, typically your ISP.
+  
+  **Example:** `"KDDI CORPORATION"`
+</ResponseField>
+
+<ResponseField name="ip" type="string" required>
+  Your public IP address as seen by the Cloudflare test server.
+  
+  This is the external IPv4 or IPv6 address that is visible on the internet.
+  
+  **Example:** `"203.0.113.10"`
+</ResponseField>
+
+## Complete Example
+
+Here's a complete example of the JSON output (with `-pretty` flag):
+
+```json
+{
+  "download_mbps": 225.14,
+  "upload_mbps": 102.87,
+  "latency_ms": {
+    "unloaded": 12.41,
+    "loaded_down": 35.09,
+    "loaded_up": 41.22,
+    "jitter": 1.98
+  },
+  "packet_loss_percent": 0.1,
+  "server_colo": "Tokyo",
+  "network_asn": "AS2516",
+  "network_as_org": "KDDI CORPORATION",
+  "ip": "203.0.113.10"
+}
+```
+
+## Compact Format
+
+With the `-json` flag (without `-pretty`), output is compact on a single line:
+
+```json
+{"download_mbps":225.14,"upload_mbps":102.87,"latency_ms":{"unloaded":12.41,"loaded_down":35.09,"loaded_up":41.22,"jitter":1.98},"packet_loss_percent":0.1,"server_colo":"Tokyo","network_asn":"AS2516","network_as_org":"KDDI CORPORATION","ip":"203.0.113.10"}
+```
+
+## Usage Examples
+
+### Parse Specific Fields with jq
+
+```bash
+# Extract download speed
+unispeedtest -json | jq '.download_mbps'
+
+# Extract all latency values
+unispeedtest -json | jq '.latency_ms'
+
+# Get server location and ISP
+unispeedtest -json | jq '{server: .server_colo, isp: .network_as_org}'
+```
+
+### Process in Scripts
+
+```bash
+#!/bin/bash
+RESULT=$(unispeedtest -json)
+DOWNLOAD=$(echo $RESULT | jq -r '.download_mbps')
+
+if (( $(echo "$DOWNLOAD < 50" | bc -l) )); then
+  echo "Warning: Slow connection detected ($DOWNLOAD Mbps)"
+fi
+```
+
+### Save and Track Over Time
+
+```bash
+# Append timestamped results to a log file
+echo "{\"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"result\": $(unispeedtest -json)}" >> speedtest-log.jsonl
+```

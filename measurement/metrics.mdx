@@ -1,0 +1,150 @@
+---
+title: Metrics Explained
+description: Understanding the speed test metrics and what they mean for your connection
+---
+
+Universal Speedtest CLI measures several key network performance metrics. This page explains each metric, how it's calculated, and what it means for your connection quality.
+
+## Download Throughput
+
+**What it measures:** The rate at which data can be transferred from the test server to your device.
+
+**Calculation method:** The tool runs multiple download tests across different file sizes:
+- 101 KB (10 repetitions)
+- 1 MB (8 repetitions)
+- 10 MB (6 repetitions)
+- 25 MB (4 repetitions)
+
+The final download speed is reported as the **90th percentile** of all samples (`stats.Quartile(downSpeeds, 0.90)` in main.go:62). This statistical approach filters out outliers and provides a more reliable measure of sustained performance.
+
+**Units:** Megabits per second (Mbps)
+
+**Implementation:** See cloudflare/measure.go:84-88
+
+## Upload Throughput
+
+**What it measures:** The rate at which data can be transferred from your device to the test server.
+
+**Calculation method:** Similar to downloads, multiple upload tests run across the same file sizes with slightly different repetition counts:
+- 101 KB (8 repetitions)
+- 1 MB (6 repetitions)
+- 10 MB (4 repetitions)
+- 25 MB (4 repetitions)
+
+The final upload speed uses the **90th percentile** of all samples (`stats.Quartile(upSpeeds, 0.90)` in main.go:67).
+
+**Units:** Megabits per second (Mbps)
+
+**Implementation:** See cloudflare/measure.go:90-93
+
+## Latency Measurements
+
+The tool measures latency in three different scenarios to understand your connection's responsiveness.
+
+### Unloaded Latency
+
+**What it measures:** The base network delay when no data transfers are active.
+
+**Calculation method:** Sends 20 lightweight requests (0 bytes) and measures the time to first byte (TTFB) minus server processing time:
+
+```go
+dur := pd.TTFB.Sub(pd.Started).Seconds()*1000 - pd.ServerTiming
+```
+
+The **median** of these 20 samples is reported as the unloaded latency (main.go:51).
+
+**Units:** Milliseconds (ms)
+
+**Implementation:** See cloudflare/measure.go:22-35
+
+### Loaded Latency (During Download)
+
+**What it measures:** Network delay while download tests are actively running.
+
+**Calculation method:** A background monitor sends latency probes every 200ms during the download phase. The **median** of all collected samples is reported (main.go:76).
+
+**Why it matters:** Shows how your latency degrades under download load. High loaded latency indicates bufferbloat or network congestion.
+
+**Implementation:** See cloudflare/measure.go:38-57
+
+### Loaded Latency (During Upload)
+
+**What it measures:** Network delay while upload tests are actively running.
+
+**Calculation method:** Same background monitoring as download, with the **median** of samples reported (main.go:77).
+
+**Why it matters:** Upload activity often causes more latency degradation than downloads on asymmetric connections.
+
+## Jitter
+
+**What it measures:** The variability in latency between consecutive measurements.
+
+**Calculation method:** Computes the average absolute difference between consecutive unloaded latency samples:
+
+```go
+func Jitter(values []float64) float64 {
+    if len(values) < 2 {
+        return 0
+    }
+    diffs := make([]float64, 0, len(values)-1)
+    for i := 0; i < len(values)-1; i++ {
+        diffs = append(diffs, math.Abs(values[i]-values[i+1]))
+    }
+    return Average(diffs)
+}
+```
+
+**Units:** Milliseconds (ms)
+
+**Why it matters:** High jitter causes inconsistent performance, particularly problematic for real-time applications like video calls and online gaming.
+
+**Implementation:** See stats/stats.go:53-63
+
+## Packet Loss
+
+**What it measures:** The percentage of network packets that fail to reach their destination.
+
+**Calculation method:** Sends 1,000 concurrent lightweight requests with a concurrency limit of 50. Counts successful and failed requests:
+
+```go
+loss := (float64(failed) / float64(totalRequests)) * 100
+```
+
+The result is rounded to one decimal place.
+
+**Units:** Percentage (%)
+
+**Why it matters:** Even small amounts of packet loss (>1%) can significantly degrade application performance, particularly for protocols that require retransmission.
+
+**Test parameters:**
+- Total requests: 1,000
+- Concurrency: 50 simultaneous requests
+- Request type: GET `/__down?bytes=0`
+
+**Implementation:** See cloudflare/measure.go:118-164
+
+## Speed Calculation Formula
+
+All throughput measurements use the same conversion formula (cloudflare/measure.go:18-20):
+
+```go
+func MeasureSpeed(byteCount int, durationMs float64) float64 {
+    return (float64(byteCount*8) / (durationMs / 1000)) / 1e6
+}
+```
+
+This converts:
+1. Bytes to bits (multiply by 8)
+2. Milliseconds to seconds (divide by 1000)
+3. Bits per second to megabits per second (divide by 1,000,000)
+
+## Why 90th Percentile?
+
+The tool uses the 90th percentile rather than average or median for throughput measurements because:
+
+- **Filters outliers:** Eliminates the slowest 10% of samples that may be affected by transient issues
+- **Reflects sustained performance:** Better represents the speed you can consistently achieve
+- **Industry standard:** Commonly used in network performance measurement and SLA definitions
+- **More optimistic than median:** Captures your connection's capability under good conditions
+
+The implementation uses linear interpolation for accurate percentile calculation (stats/stats.go:37-51).

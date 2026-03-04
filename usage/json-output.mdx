@@ -1,0 +1,376 @@
+---
+title: JSON output
+description: Machine-readable JSON output for automation and integration
+---
+
+## Using JSON output
+
+To get speed test results in JSON format, use the `-json` flag:
+
+```bash
+unispeedtest -json
+```
+
+For formatted JSON with indentation:
+
+```bash
+unispeedtest -pretty
+```
+
+<Info>
+The `-pretty` flag automatically enables JSON output (it implies `-json`), so you don't need both flags.
+</Info>
+
+## JSON schema
+
+The JSON output follows this structure (actual field names from `internal/reporter/printer.go:70-79`):
+
+```json
+{
+  "download_mbps": 145.89,
+  "upload_mbps": 95.67,
+  "latency_ms": {
+    "unloaded": 12.34,
+    "loaded_down": 45.67,
+    "loaded_up": 38.21,
+    "jitter": 2.15
+  },
+  "packet_loss_percent": 0.3,
+  "server_colo": "San Francisco",
+  "network_asn": "AS12345",
+  "network_as_org": "Example ISP",
+  "ip": "203.0.113.42"
+}
+```
+
+### Field descriptions
+
+<ParamField path="download_mbps" type="float">
+  Overall download speed in megabits per second (90th percentile of all samples)
+</ParamField>
+
+<ParamField path="upload_mbps" type="float">
+  Overall upload speed in megabits per second (90th percentile of all samples)
+</ParamField>
+
+<ParamField path="latency_ms" type="object">
+  Latency measurements in milliseconds
+  
+  <Expandable title="properties">
+    <ParamField path="unloaded" type="float">
+      Baseline latency measured before speed tests (median of 20 samples)
+    </ParamField>
+    
+    <ParamField path="loaded_down" type="float">
+      Latency measured during download tests (indicates bufferbloat)
+    </ParamField>
+    
+    <ParamField path="loaded_up" type="float">
+      Latency measured during upload tests (indicates bufferbloat)
+    </ParamField>
+    
+    <ParamField path="jitter" type="float">
+      Latency variation calculated as interquartile range
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField path="packet_loss_percent" type="float">
+  Packet loss percentage (0-100), rounded to one decimal place. Measured from 1000 concurrent requests.
+</ParamField>
+
+<ParamField path="server_colo" type="string">
+  Cloudflare data center city name used for testing
+</ParamField>
+
+<ParamField path="network_asn" type="string">
+  Your network's Autonomous System Number in "AS####" format
+</ParamField>
+
+<ParamField path="network_as_org" type="string">
+  Your ISP or network organization name
+</ParamField>
+
+<ParamField path="ip" type="string">
+  Your public IP address as detected by Cloudflare
+</ParamField>
+
+## Compact vs pretty output
+
+### Compact JSON (default with `-json`)
+
+```bash
+unispeedtest -json
+```
+
+Outputs a single line (example truncated for readability):
+
+```json
+{"download_mbps":145.89,"upload_mbps":95.67,"latency_ms":{"unloaded":12.34,"loaded_down":45.67,"loaded_up":38.21,"jitter":2.15},"packet_loss_percent":0.3,"server_colo":"San Francisco","network_asn":"AS12345","network_as_org":"Example ISP","ip":"203.0.113.42"}
+```
+
+**Best for:** Piping to tools, logging, database storage, bandwidth-sensitive scenarios
+
+### Pretty-printed JSON (with `-pretty`)
+
+```bash
+unispeedtest -pretty
+```
+
+Outputs formatted JSON with 2-space indentation:
+
+```json
+{
+  "download_mbps": 145.89,
+  "upload_mbps": 95.67,
+  "latency_ms": {
+    "unloaded": 12.34,
+    "loaded_down": 45.67,
+    "loaded_up": 38.21,
+    "jitter": 2.15
+  },
+  "packet_loss_percent": 0.3,
+  "server_colo": "San Francisco",
+  "network_asn": "AS12345",
+  "network_as_org": "Example ISP",
+  "ip": "203.0.113.42"
+}
+```
+
+**Best for:** Debugging, manual inspection, configuration files
+
+<Tip>
+The implementation uses Go's `json.Marshal()` for compact output and `json.MarshalIndent(data, "", "  ")` for pretty output. See `internal/reporter/printer.go:82-110`.
+</Tip>
+
+## Automation examples
+
+### Piping to jq
+
+Extract specific fields using [jq](https://jqlang.github.io/jq/):
+
+```bash
+# Get just the download speed
+unispeedtest -json | jq '.download_mbps'
+
+# Get both download and upload speeds
+unispeedtest -json | jq '{download: .download_mbps, upload: .upload_mbps}'
+
+# Check if packet loss is above 1%
+unispeedtest -json | jq 'select(.packet_loss_percent > 1)'
+
+# Get unloaded latency
+unispeedtest -json | jq '.latency_ms.unloaded'
+```
+
+### Saving to a file
+
+Save results with timestamp:
+
+```bash
+# Compact JSON
+unispeedtest -json > speedtest-$(date +%Y%m%d-%H%M%S).json
+
+# Pretty-printed JSON
+unispeedtest -pretty > speedtest-$(date +%Y%m%d-%H%M%S).json
+```
+
+### Scheduled testing
+
+Run periodic tests and append to a log file:
+
+```bash
+#!/bin/bash
+# Run every hour via cron
+timestamp=$(date -Iseconds)
+result=$(unispeedtest -json)
+echo "{\"timestamp\":\"$timestamp\",\"result\":$result}" >> /var/log/speedtest.jsonl
+```
+
+Add to crontab:
+
+```cron
+0 * * * * /path/to/speedtest-logger.sh
+```
+
+### Conditional alerting
+
+Alert if speeds drop below threshold:
+
+```bash
+#!/bin/bash
+MIN_DOWNLOAD=50  # Minimum acceptable download speed in Mbps
+
+result=$(unispeedtest -json)
+download=$(echo "$result" | jq '.download_mbps')
+
+if (( $(echo "$download < $MIN_DOWNLOAD" | bc -l) )); then
+  echo "WARNING: Download speed ($download Mbps) below threshold ($MIN_DOWNLOAD Mbps)"
+  # Send alert (email, Slack, etc.)
+  echo "$result" | mail -s "Speed Test Alert" admin@example.com
+fi
+```
+
+### Shell script with error handling
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+if ! result=$(unispeedtest -json 2>&1); then
+  echo "Speed test failed: $result" >&2
+  exit 1
+fi
+
+if ! echo "$result" | jq -e . >/dev/null 2>&1; then
+  echo "Invalid JSON output" >&2
+  exit 1
+fi
+
+# Process valid JSON
+echo "$result" | jq '.'
+```
+
+## Integration with monitoring systems
+
+### Prometheus
+
+Use a textfile collector to expose metrics:
+
+```bash
+#!/bin/bash
+# prometheus-speedtest.sh
+OUTPUT_FILE="/var/lib/prometheus/node-exporter/speedtest.prom"
+
+result=$(unispeedtest -json)
+
+cat > "$OUTPUT_FILE" <<EOF
+# HELP speedtest_download_mbps Download speed in megabits per second
+# TYPE speedtest_download_mbps gauge
+speedtest_download_mbps $(echo "$result" | jq -r '.download_mbps')
+
+# HELP speedtest_upload_mbps Upload speed in megabits per second
+# TYPE speedtest_upload_mbps gauge
+speedtest_upload_mbps $(echo "$result" | jq -r '.upload_mbps')
+
+# HELP speedtest_latency_ms Latency in milliseconds
+# TYPE speedtest_latency_ms gauge
+speedtest_latency_ms{type="unloaded"} $(echo "$result" | jq -r '.latency_ms.unloaded')
+speedtest_latency_ms{type="loaded_down"} $(echo "$result" | jq -r '.latency_ms.loaded_down')
+speedtest_latency_ms{type="loaded_up"} $(echo "$result" | jq -r '.latency_ms.loaded_up')
+speedtest_latency_ms{type="jitter"} $(echo "$result" | jq -r '.latency_ms.jitter')
+
+# HELP speedtest_packet_loss_percent Packet loss percentage
+# TYPE speedtest_packet_loss_percent gauge
+speedtest_packet_loss_percent $(echo "$result" | jq -r '.packet_loss_percent')
+EOF
+```
+
+### InfluxDB
+
+Write results to InfluxDB:
+
+```bash
+#!/bin/bash
+INFLUX_URL="http://localhost:8086"
+INFLUX_TOKEN="your-token"
+INFLUX_ORG="your-org"
+INFLUX_BUCKET="speedtest"
+
+result=$(unispeedtest -json)
+
+# Convert to InfluxDB line protocol
+timestamp=$(date +%s%N)
+download=$(echo "$result" | jq -r '.download_mbps')
+upload=$(echo "$result" | jq -r '.upload_mbps')
+latency=$(echo "$result" | jq -r '.latency_ms.unloaded')
+jitter=$(echo "$result" | jq -r '.latency_ms.jitter')
+packet_loss=$(echo "$result" | jq -r '.packet_loss_percent')
+server=$(echo "$result" | jq -r '.server_colo')
+
+curl -XPOST "$INFLUX_URL/api/v2/write?org=$INFLUX_ORG&bucket=$INFLUX_BUCKET" \
+  -H "Authorization: Token $INFLUX_TOKEN" \
+  -H "Content-Type: text/plain; charset=utf-8" \
+  --data-binary "speedtest,server=$server download=$download,upload=$upload,latency=$latency,jitter=$jitter,packet_loss=$packet_loss $timestamp"
+```
+
+### Grafana Loki
+
+Ship JSON logs to Loki:
+
+```bash
+#!/bin/bash
+LOKI_URL="http://localhost:3100"
+
+result=$(unispeedtest -json)
+timestamp=$(date +%s%N)  # nanoseconds
+
+# Send to Loki
+curl -XPOST "$LOKI_URL/loki/api/v1/push" \
+  -H "Content-Type: application/json" \
+  --data-binary @- <<EOF
+{
+  "streams": [
+    {
+      "stream": {
+        "job": "speedtest",
+        "host": "$(hostname)"
+      },
+      "values": [
+        ["$timestamp", $(echo "$result" | jq -c '.')]
+      ]
+    }
+  ]
+}
+EOF
+```
+
+## Error handling
+
+When running in JSON mode, the tool will:
+
+1. **Suppress progress output** - No messages during testing
+2. **Write errors to stderr** - Error messages go to stderr, not stdout
+3. **Exit with non-zero code** - Returns exit code 1 on JSON encoding errors
+
+Example error handling:
+
+```bash
+if result=$(unispeedtest -json 2>/tmp/error.log); then
+  echo "Success: $result" | jq '.'
+else
+  echo "Failed. Check /tmp/error.log for details" >&2
+  exit 1
+fi
+```
+
+<Warning>
+The tool may still print warnings to stderr even in JSON mode (e.g., "Warning: could not fetch network metadata"). Always redirect stderr if you need clean JSON output.
+</Warning>
+
+## Best practices
+
+<CardGroup cols={2}>
+  <Card title="Validate JSON" icon="check">
+    Always validate JSON output before processing:
+    ```bash
+    result=$(unispeedtest -json)
+    echo "$result" | jq -e . > /dev/null
+    ```
+  </Card>
+  
+  <Card title="Use compact for logs" icon="database">
+    Use `-json` (not `-pretty`) when writing to log files or databases to save space.
+  </Card>
+  
+  <Card title="Redirect stderr" icon="right-left">
+    Redirect stderr when you need clean JSON:
+    ```bash
+    unispeedtest -json 2>/dev/null
+    ```
+  </Card>
+  
+  <Card title="Add timestamps" icon="clock">
+    Always add timestamps when logging results for historical analysis.
+  </Card>
+</CardGroup>

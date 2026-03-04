@@ -1,0 +1,147 @@
+---
+title: Basic usage
+description: Learn how to run Universal Speedtest CLI and interpret the results
+---
+
+## Running the basic command
+
+To run a speed test, simply execute the command without any flags:
+
+```bash
+unispeedtest
+```
+
+The tool will automatically:
+1. Initialize the Cloudflare Speed Test connection
+2. Fetch network metadata (ISP, server location, IP address)
+3. Measure unloaded latency and jitter
+4. Run download tests across multiple file sizes
+5. Run upload tests across multiple file sizes
+6. Perform a packet loss test with 1000 requests
+7. Display a comprehensive human-readable report
+
+## Progress output explanation
+
+During the test, you'll see real-time progress output:
+
+```
+Initializing Cloudflare Speed Test...
+
+[ Download Measurements ]
+    101kB    test (10/10): 45.23 Mbps
+    1001kB   test (8/8): 89.67 Mbps
+    10MB     test (6/6): 123.45 Mbps
+    25MB     test (4/4): 145.89 Mbps
+
+[ Upload Measurements ]
+    101kB    test (8/8): 32.11 Mbps
+    1001kB   test (6/6): 67.43 Mbps
+    10MB     test (4/4): 89.22 Mbps
+    25MB     test (4/4): 95.67 Mbps
+
+[ Packet Loss Test ] Running 1000 requests...
+```
+
+### Understanding the progress output
+
+- **Test sizes**: The tool runs tests with progressively larger file sizes (101kB, 1001kB, 10MB, 25MB)
+- **Repetition counts**: Each size is tested multiple times for accuracy
+  - Download: 10, 8, 6, 4 repetitions
+  - Upload: 8, 6, 4, 4 repetitions
+- **Median speed**: The displayed speed for each size is the median of all repetitions
+- **Packet loss**: Runs 1000 concurrent lightweight requests to detect network reliability issues
+
+## Human-readable report format
+
+After the test completes, you'll see a detailed report:
+
+```
+======================================================
+         YOUR INTERNET SPEED REPORT
+======================================================
+
+Overall Download: 145.89 Mbps
+Overall Upload:   95.67 Mbps
+
+Latency & Jitter:
+  Unloaded Latency: 12.34 ms (Jitter: 2.15 ms)
+  Down-Loaded Latency: 45.67 ms
+  Up-Loaded Latency: 38.21 ms
+
+Packet Loss:
+  0.3% (Received 997 / 1000)
+
+Network Quality Score:
+  Video Streaming: Good  |  Online Gaming: Good  |  Video Chatting: Good
+
+Server & Connection:
+  Server Location: San Francisco
+  Your Network:    Example ISP (AS12345)
+  Your IP address: 203.0.113.42
+======================================================
+```
+
+### Report sections explained
+
+<AccordionGroup>
+  <Accordion title="Speed metrics">
+    - **Overall Download**: 90th percentile of all download speed samples
+    - **Overall Upload**: 90th percentile of all upload speed samples
+    
+    The tool uses the 90th percentile (not average) to provide a more realistic representation of sustained throughput.
+  </Accordion>
+
+  <Accordion title="Latency & jitter">
+    - **Unloaded Latency**: Round-trip time measured before speed tests begin (median of 20 samples)
+    - **Jitter**: Variation in latency measurements, calculated as interquartile range
+    - **Down-Loaded Latency**: Latency measured during download tests (shows bufferbloat)
+    - **Up-Loaded Latency**: Latency measured during upload tests (shows bufferbloat)
+    
+    High loaded latency compared to unloaded latency indicates bufferbloat issues.
+  </Accordion>
+
+  <Accordion title="Packet loss">
+    Percentage of failed requests out of 1000 concurrent attempts. Even 1-2% packet loss can significantly impact real-time applications.
+  </Accordion>
+
+  <Accordion title="Network quality score">
+    Evaluates your connection suitability for common activities:
+    - **Video Streaming**: Based on download speed and latency
+    - **Online Gaming**: Based on latency, jitter, and packet loss
+    - **Video Chatting**: Based on upload speed, latency, and jitter
+  </Accordion>
+
+  <Accordion title="Server & connection">
+    - **Server Location**: Cloudflare data center city used for testing
+    - **Your Network**: ISP name and Autonomous System Number (ASN)
+    - **Your IP address**: Public IP address detected by Cloudflare
+  </Accordion>
+</AccordionGroup>
+
+## Common use cases
+
+<CardGroup cols={2}>
+  <Card title="Troubleshooting slow internet" icon="wrench">
+    Run the test during periods of slow performance to identify whether the issue is with download speed, upload speed, latency, or packet loss.
+  </Card>
+  
+  <Card title="Verifying ISP speeds" icon="gauge-high">
+    Compare the results with your ISP's advertised speeds. Run multiple tests at different times to get an average.
+  </Card>
+  
+  <Card title="Testing after network changes" icon="network-wired">
+    Run tests before and after making network changes (router upgrade, QoS settings, etc.) to measure the impact.
+  </Card>
+  
+  <Card title="Identifying bufferbloat" icon="stopwatch">
+    Check if loaded latency is significantly higher than unloaded latency. A large difference indicates bufferbloat.
+  </Card>
+</CardGroup>
+
+## Interrupting a test
+
+You can safely interrupt a running test by pressing `Ctrl+C`. The tool will exit immediately with code 130.
+
+<Note>
+The test typically takes 30-60 seconds to complete, depending on your connection speed and network conditions.
+</Note>
