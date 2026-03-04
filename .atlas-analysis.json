@@ -1,0 +1,74 @@
+{
+  "projectType": "cli-tool",
+  "projectName": "Universal Speedtest CLI",
+  "projectDescription": "Extensible command-line network benchmark for measuring download/upload speeds, latency, jitter, and packet loss.",
+  "theme": "aspen",
+  "primaryColor": "#0EA5E9",
+  "lightColor": "#38BDF8",
+  "darkColor": "#0284C7",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Get Started",
+        "pages": [
+          "introduction",
+          "installation",
+          "quickstart"
+        ]
+      },
+      {
+        "group": "Usage",
+        "pages": [
+          "usage/basic-usage",
+          "usage/output-formats",
+          "usage/json-output"
+        ]
+      },
+      {
+        "group": "Measurement Details",
+        "pages": [
+          "measurement/metrics",
+          "measurement/methodology",
+          "measurement/network-metadata"
+        ]
+      },
+      {
+        "group": "Development",
+        "pages": [
+          "development/building",
+          "development/testing",
+          "development/architecture"
+        ]
+      },
+      {
+        "group": "Reference",
+        "pages": [
+          "reference/cli-options",
+          "reference/json-schema",
+          "reference/environment-variables"
+        ]
+      },
+      {
+        "group": "Resources",
+        "pages": [
+          "roadmap",
+          "contributing",
+          "license"
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Download and upload throughput measurement (90th percentile)",
+    "Unloaded and loaded latency with jitter analysis",
+    "Packet loss testing (1000 requests)",
+    "Network metadata discovery (Cloudflare colo, ASN, public IP)",
+    "JSON and human-readable output formats",
+    "Extensible provider architecture (currently Cloudflare)"
+  ],
+  "publicApiSurface": [
+    "unispeedtest",
+    "unispeedtest -json",
+    "unispeedtest -pretty"
+  ]
+}
